@@ -2,12 +2,16 @@ import yfinance as yf
 import ta
 
 def get_stock_data(ticker):
-    df = yf.download(ticker, period="6mo", interval="1d")
-    df.dropna(inplace=True)
-    return df
+    try:
+        df = yf.download(ticker, period="6mo", interval="1d", progress=False)
+        return df
+    except Exception:
+        return None
 
 
 def add_indicators(df):
+    df = df.copy()
+
     df["rsi"] = ta.momentum.RSIIndicator(df["Close"]).rsi()
 
     macd = ta.trend.MACD(df["Close"])
