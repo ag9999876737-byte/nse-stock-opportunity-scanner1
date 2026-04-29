@@ -7,81 +7,72 @@ from services.news import get_news
 from services.sentiment import sentiment_score
 from utils.helpers import generate_signal
 
-st.set_page_config(
-    page_title="NSE 4-Week Stock Scanner",
-    layout="wide"
-)
+st.set_page_config(page_title="NSE Stock Scanner", layout="wide")
 
-st.title("📊 NSE 4-Week Investment Opportunity Scanner")
-st.write("AI-powered stock ranking system using technical + news sentiment signals")
+st.title("📊 NSE 4-Week Stock Opportunity Scanner")
+st.write("Technical + News Sentiment based ranking system")
 
-# Load universe
 stocks = get_nse_universe()
 
 results = []
 
-# Button
-if st.button("🚀 Run Stock Analysis"):
+st.write("Total Stocks in Universe:", len(stocks))
+
+if st.button("🚀 Run Analysis"):
 
     progress = st.progress(0)
 
     for i, ticker in enumerate(stocks):
 
-        try:
-            # 1. Price data
-            df = get_stock_data(ticker)
-            df = add_indicators(df)
+        st.write(f"Analyzing {ticker}")
 
-            # 2. News + sentiment
-            news = get_news(ticker.replace(".NS", ""))
-            sentiment = sentiment_score(news)
+        df = get_stock_data(ticker)
 
-            # 3. Score
-            score = compute_score(df, sentiment)
-            signal = generate_signal(score)
-
-            # 4. Entry / Target / Stoploss
-            entry = float(df["Close"].iloc[-1])
-            target = round(entry * (1 + (score - 50) / 200), 2)
-            stoploss = round(entry * 0.95, 2)
-
-            results.append({
-                "Stock": ticker,
-                "Signal": signal,
-                "Score": score,
-                "Entry": round(entry, 2),
-                "Target": target,
-                "Stoploss": stoploss
-            })
-
-        except Exception:
+        # skip invalid data safely
+        if df is None or df.empty or len(df) < 50:
+            st.warning(f"No/insufficient data: {ticker}")
             continue
 
-        # progress bar update
+        df = add_indicators(df)
+
+        news = get_news(ticker.replace(".NS", ""))
+        sentiment = sentiment_score(news)
+
+        score = compute_score(df, sentiment)
+        signal = generate_signal(score)
+
+        entry = float(df["Close"].iloc[-1])
+        target = round(entry * (1 + (score - 50) / 200), 2)
+        stoploss = round(entry * 0.95, 2)
+
+        results.append({
+            "Stock": ticker,
+            "Signal": signal,
+            "Score": score,
+            "Entry": round(entry, 2),
+            "Target": target,
+            "Stoploss": stoploss
+        })
+
         progress.progress((i + 1) / len(stocks))
 
-    st.success("Analysis Completed ✅")
+    st.success("Analysis Completed")
 
-    # Sort results by score (best opportunities first)
-    results = sorted(results, key=lambda x: x["Score"], reverse=True)
+    if len(results) == 0:
+        st.error("No results generated. Check data source issues.")
+    else:
+        results = sorted(results, key=lambda x: x["Score"], reverse=True)
 
-    st.subheader("📌 Top Stock Opportunities")
+        st.subheader("📌 Top Opportunities")
+        st.dataframe(results, use_container_width=True)
 
-    st.dataframe(results, use_container_width=True)
+        st.subheader("🔥 Top 5 Picks")
 
-    # Top 5 highlight
-    st.subheader("🔥 Top 5 Picks")
-
-    for r in results[:5]:
-        st.markdown(
-            f"""
+        for r in results[:5]:
+            st.markdown(f"""
             **{r['Stock']}**  
-            👉 Signal: {r['Signal']}  
+            👉 {r['Signal']}  
             📊 Score: {r['Score']}  
             🎯 Entry: {r['Entry']} | Target: {r['Target']} | SL: {r['Stoploss']}
             ---
-            """
-        )
-
-else:
-    st.info("Click the button above to scan the market")
+            """)
