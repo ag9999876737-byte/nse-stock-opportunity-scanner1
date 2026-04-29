@@ -9,8 +9,12 @@ def sentiment_score(news_list):
     if not news_list:
         return 0
 
-    scores = []
-    for n in news_list:
-        scores.append(sia.polarity_scores(n)["compound"])
+    try:
+        scores = []
+        for n in news_list:
+            scores.append(sia.polarity_scores(n)["compound"])
 
-    return sum(scores) / len(scores)
+        return sum(scores) / len(scores)
+
+    except:
+        return 0
