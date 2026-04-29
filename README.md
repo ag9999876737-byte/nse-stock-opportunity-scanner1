@@ -1,0 +1,1 @@
+# nse-stock-opportunity-scanner1
